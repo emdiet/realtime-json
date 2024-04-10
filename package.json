@@ -1,0 +1,27 @@
+{
+  "name": "realtime-json",
+  "version": "0.0.0",
+  "description": "parsing streamed JSON in real time",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emdiet/realtime-json.git"
+  },
+  "keywords": [
+    "JSON",
+    "realtime",
+    "LLM",
+    "AI",
+    "streaming"
+  ],
+  "author": "emdiet",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/emdiet/realtime-json/issues"
+  },
+  "homepage": "https://github.com/emdiet/realtime-json#readme"
+}

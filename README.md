@@ -14,6 +14,8 @@ This TypeScript library implements a realtime JSON parser which allows for the s
 - **Dynamic Sub-Parsing:** Dynamically delegates parsing responsibilities to specialized sub-parsers depending on the context within the JSON data (objects, arrays, strings, numbers).
 - **Error Handling:** Robust error handling capabilities, providing detailed information about parsing errors and allowing for graceful recovery or termination of parsing.
 
+For your convenience, this lib is also available as a JS file. 
+
 ## Installation
 
 To include this parser in your project, simply copy the provided TypeScript files into your project directory.
@@ -24,12 +26,13 @@ Ensure that you have TypeScript configured and that you are able to import files
 
 Here is a basic example of how to use the Realtime JSON Parser to stream and parse JSON data:
 
+Copy the index.ts or index.js into your project,
+
 ```typescript
-import { Observable, Observer, Subscription } from "./types/observable";
-import { RealtimeJSONParser } from "./path/to/parser";
+import { RealtimeJSONParser, Subject } from "./path to file.ts";
 
 // Create a new Observable stream
-const jsonStream = new Observable<string>();
+const jsonStream = new Subject<string>(); // or use RxJs or similar observables
 
 // Instantiate the RealtimeJSONParser with the JSON stream
 const parser = new RealtimeJSONParser(jsonStream);
@@ -47,6 +50,8 @@ jsonStream.next('{"path": {"to": {"element": "value"}}}');
 // Close the stream when done
 jsonStream.complete();
 ```
+
+For more examples, see the demo folder.
 
 ## Observing Data
 

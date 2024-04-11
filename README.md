@@ -86,6 +86,7 @@ Contributions to the Realtime JSON Parser are welcome. Please feel free to fork 
 
 ## Future Plans
 
+- [ ] write tests
 - [ ] make a proper package
 - [ ] auto-port to python
 - [ ] add XML support

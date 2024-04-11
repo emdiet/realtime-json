@@ -64,3 +64,9 @@ The parser and the observable streams provide mechanisms for error handling and 
 ## Contributing
 
 Contributions to the Realtime JSON Parser are welcome. Please feel free to fork the repository, make changes, post issues, and submit pull requests.
+
+## Future Plans
+
+[] make a proper package
+[] auto-port to python
+[] add XML support

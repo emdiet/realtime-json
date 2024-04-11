@@ -36,7 +36,17 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
         input.subscribe({
             next: (value) => {
                 if(value === "") return;
-                this.__activeSubParser = this.__activeSubParser.__push(value);
+                try{
+                    this.__activeSubParser = this.__activeSubParser.__push(value);
+                }catch(e){
+                    this.stringListeners.forEach(listener => {
+                        listener.observer.error(e as any);
+                    });
+                    this.objectListeners.forEach(listener => {
+                        listener.observer.error(e as any);
+                    }); 
+                    throw e;             
+                }
             },
             error: (error) => {
                 console.error(error);

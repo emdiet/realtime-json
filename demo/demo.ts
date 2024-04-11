@@ -74,7 +74,7 @@ start!.onclick = () => {
     });
 
     // input1
-    status1.textContent = "Loading";
+    status1.textContent = "Waiting";
     realtimeParser.observeStream(input1.value).subscribe({
         next: (value) => {
             output1.textContent += value;
@@ -92,7 +92,7 @@ start!.onclick = () => {
     });
 
     // input2
-    status2.textContent = "Loading";
+    status2.textContent = "Waiting";
     realtimeParser.observeStream(input2.value).subscribe({
         next: (value) => {
             output2.textContent += value;
@@ -110,7 +110,7 @@ start!.onclick = () => {
     });
 
     // input3
-    status3.textContent = "Loading";
+    status3.textContent = "Waiting";
     realtimeParser.observeStream(input3.value).subscribe({
         next: (value) => {
             output3.textContent += value;
@@ -128,7 +128,7 @@ start!.onclick = () => {
     });
 
     // input4
-    status4.textContent = "Loading";
+    status4.textContent = "Waiting";
     realtimeParser.observeStream(input4.value).subscribe({
         next: (value) => {
             output4.textContent += value;
@@ -146,7 +146,7 @@ start!.onclick = () => {
     });
 
     // input5
-    status5.textContent = "Loading";
+    status5.textContent = "Waiting";
     realtimeParser.observeStream(input5.value).subscribe({
         next: (value) => {
             output5.textContent += value;
@@ -164,7 +164,7 @@ start!.onclick = () => {
     });
 
     // input6
-    status6.textContent = "Loading";
+    status6.textContent = "Waiting";
     realtimeParser.observeStream(input6.value).subscribe({
         next: (value) => {
             output6.textContent += value;

@@ -30,7 +30,18 @@ class RealtimeJSONParser {
             next: (value) => {
                 if (value === "")
                     return;
-                this.__activeSubParser = this.__activeSubParser.__push(value);
+                try {
+                    this.__activeSubParser = this.__activeSubParser.__push(value);
+                }
+                catch (e) {
+                    this.stringListeners.forEach(listener => {
+                        listener.observer.error(e);
+                    });
+                    this.objectListeners.forEach(listener => {
+                        listener.observer.error(e);
+                    });
+                    throw e;
+                }
             },
             error: (error) => {
                 console.error(error);

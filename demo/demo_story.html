@@ -6,65 +6,74 @@
         background-color: aqua;
         display: inline-block;
     }
-    .object{
+    .output .object{
         /* monospace and white-space: pre-wrap; */
         white-space: pre-wrap;
         font-family: monospace;
     }
-    .string{
+    .output .string{
         white-space: pre-wrap;
+        background-color: rgb(246, 212, 201);
     }
 </style>
 <div>
     <textarea id="textinput">{
-"story": "In the ancient kingdom of Eldoria, nestled between the Whispering Woods and the Silver Mountains, lived a young mage named Alara. She was the guardian of the Celestial Amulet, a powerful artifact that maintained balance between the realms of the living and the shadows. Alara's days were spent studying ancient tomes and perfecting her control over the elemental magics, for she knew that dark forces, envious of her power, lurked beyond the kingdom's borders, seeking to plunge the world into eternal night.\n\nOne fateful evening, as the twin moons bathed the kingdom in a silver glow, a shadowy figure breached the defenses of Eldoria, aiming to steal the Celestial Amulet. The intruder, a sorcerer from the forgotten lands of Morzath, wielded dark magic that threatened to overwhelm Alara. However, using her wit and mastery over the elements, Alara engaged the sorcerer in a fierce battle that raged from the marble halls of her tower to the starlit forests. With the fate of the kingdom hanging in the balance, she unleashed a powerful spell, channeling the pure essence of the Celestial Amulet. The sorcerer was vanquished, but not without cost. The amulet shattered, dispersing its power across the lands and leaving Alara with the daunting task of restoring balance once more.\n\nAs dawn broke, Alara, weary yet resolute, embarked on a quest to retrieve the fragments of the Celestial Amulet. Her journey would take her beyond the known realms, into the depths of ancient ruins, and across the seas of time. Alongside allies she would gather along the way, including a dragon of the old world and a knight banished from time, Alara's quest would reveal the true nature of power and sacrifice. For in her heart, she carried the hope of Eldoria and the secret to mending a fractured world.",
-"description": "A young mage named Alara battles a dark sorcerer to protect her kingdom and the Celestial Amulet, embarking on a quest to restore balance.",
-"keywords": ["Eldoria", "Celestial Amulet", "Alara", "mage", "dark forces", "ancient tomes", "elemental magics", "shadowy figure", "sorcerer", "Morzath", "battle", "quest", "dragon", "knight", "sacrifice"]
-   }</textarea>
+        "story": "In the heart of an ancient forest, where trees whispered secrets of the old world, a small, luminous orb floated aimlessly. It was Yara, the last light of a fallen star, searching for a place to call home. One night, under the light of a crescent moon, Yara stumbled upon an abandoned castle, its gates creaked open as if welcoming her. Within its walls, she discovered a garden overgrown with wildflowers, and in the center, a withered tree. Sensing the tree's silent plea, Yara nestled into its gnarled roots, and with a gentle pulse, she restored life to the tree, turning the garden into an eternal spring.",
+        "title": "Yara's Garden",
+        "description": "A fallen star named Yara finds a new home in an abandoned castle, transforming a withered garden into eternal spring.",
+        "keywords": ["fantasy", "fallen star", "ancient forest", "abandoned castle", "eternal spring"]
+        }</textarea>
     <div class="controls">
         <button id="btnStart">start</button>
         <button id="btnReset">reset</button>
         <span>cursor:</span><span id="cursor">0</span><span>/</span><span class="status" id="total">0</span>
     </div>
     <div class="observer">
-        <input type="text" class="query" value="summary"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable"/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <input type="text" class="query" value="title"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable"/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>
     <div class="observer">
         <input type="text" class="query" value="keywords"/><input type="checkbox" class="stringEnable"/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>
     <div class="observer">
         <input type="text" class="query" value="story"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable"/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value="description"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable"/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>
     <div class="observer">
         <input type="text" class="query" value="x"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>
     <div class="observer">
         <input type="text" class="query" value="x"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>
     <div class="observer">
         <input type="text" class="query" value=""/><input type="checkbox" class="stringEnable"/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
         <div class="output">
-            <div class="string"></div>
+            <span class="string"></span>
             <div class="object"></div>
         </div>
     </div>

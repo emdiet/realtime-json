@@ -6,6 +6,25 @@ This TypeScript library implements a realtime JSON parser which allows for the s
 [nested object playground](https://emdiet.github.io/realtime-json/demo/demo.html) | [story playground](https://emdiet.github.io/realtime-json/demo/demo_story.html)
 --|-- 
 ![realtime-json](https://github.com/emdiet/realtime-json/assets/6719169/45ef3fab-f589-4174-aab6-3b78c1d3ac6c) | ![realtime-story](https://github.com/emdiet/realtime-json/assets/6719169/162fa143-3dcd-40f2-9799-b3834a7e322e)
+<details>
+    <summary>GPT-4 LLM Story prompt</summary>
+    
+```
+can you write me a super short 2 paragraph fantasy story about anything, then a title, then provide a list of keywords, and finally a short one sentence description of the story?
+
+please put it in this format:
+
+{
+    story: string, // your story here
+    title: string, // a title for the story
+    description: string, // your one sentence description
+    keywords: string[] // keywords
+}
+
+make sure it's JSON compiant! use normal quote (") delimiters. Begin your response with {
+```
+
+</details>
 
 ## Features
 

@@ -25,12 +25,13 @@ const AFTER_VALUE: MODE = Symbol("AFTER_VALUE"); // white space until , or ] or 
 const END: MODE = Symbol("END"); 
 
 
-type StringListener = {path: string[], depth: number, observer: Subject<string>, arrayDepth?: number};
-type ObjectListener = {path: string[], depth: number, observer: Subject<any>};
+type StringListener = {path: string[], depth: number, observer: Subject<string>, arrayDepth: number};
+type ObjectListener = {path: readonly string[], observer: Subject<any>, arrayDepth: number};
 
 export class RealtimeJSONParser implements __PushPassAble, __Emissive {
     private __activeSubParser: __PushPassAble = this;
     private closed = false;
+    private rootMode: MODE = START;
 
     constructor(input : Observable<string>) {
         input.subscribe({
@@ -66,19 +67,19 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
         // expect chunk[0] to be "{" or "["
         switch(chunk[0]) {
             case "{": {
-                const parser = new SubObjectParser(this.__activeSubParser , this.stringListeners);
+                const parser = new SubObjectParser(this.__activeSubParser , this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             case "[": {
-                const parser = new SubArrayParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubArrayParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             case '"': {
-                const parser = new SubStringParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubStringParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             default: {
-                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
         }
@@ -90,6 +91,11 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
     __pass(chunk: string, result: any): __PushPassAble {
         this.__emitDelta(result);
         this.__close();
+        
+        // close all listeners that aren't closed yet
+        this.stringListeners.forEach(listener => {listener.observer.complete();});
+        this.objectListeners.forEach(listener => {listener.observer.complete();});
+
         return this;       
     }
 
@@ -102,6 +108,7 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
         this.closed = true;
         console.warn("not implemented!");
         console.log("closing");
+
     }
 
     private stringListeners: StringListener[] = [];
@@ -115,14 +122,14 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
     public observeStream(query: string | string[]): Observable<string> {
         const path = this.__toQueryPath(query);
         const subject = new Subject<string>();
-        this.stringListeners.push({path: path, depth: 0, observer: subject});
+        this.stringListeners.push({path: path, depth: 0, arrayDepth: 0, observer: subject});
         return subject;
     }
 
     public observeObjects(query: string | string[]): Observable<any> {
         const path = this.__toQueryPath(query);
         const subject = new Subject<any>();
-        this.objectListeners.push({path: path, depth: 0, observer: subject});
+        this.objectListeners.push({path: path, arrayDepth: 0, observer: subject});
         return subject;
     }
 
@@ -158,10 +165,11 @@ class SubArrayParser implements __PushPassAble, __Emissive {
     * 
     */
 
-    constructor(private parent: __PushPassAble, private stringListeners: StringListener[] = []) {
+    constructor(private parent: __PushPassAble, private stringListeners: StringListener[], private objectListeners: ObjectListener[]) {
         // because we're in an array, trade listener depth for array depth
-        stringListeners.forEach(listener => {listener.depth--; listener.arrayDepth = listener.arrayDepth ? listener.arrayDepth + 1 : 1});
-
+        stringListeners.forEach(listener => {listener.arrayDepth++; listener.depth--});
+        // objectListeners have no depth
+        objectListeners.forEach(listener => {listener.arrayDepth++});
     }
 
     // receive a value from below
@@ -196,22 +204,23 @@ class SubArrayParser implements __PushPassAble, __Emissive {
                     // determine listeners
                     const stringListeners = this.stringListeners;
                     stringListeners.forEach(listener => {listener.depth++;});
+                    const objectListeners = this.objectListeners;
 
                     // expect { or [ or " or number
                     switch(chunk[0]) {
                         case "{": {
                             this.mode = OBJECT;
-                            const parser = new SubObjectParser(this, stringListeners);
+                            const parser = new SubObjectParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case "[": {
                             this.mode = ARRAY;
-                            const parser = new SubArrayParser(this, stringListeners);
+                            const parser = new SubArrayParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case '"': {
                             this.mode = STRING;
-                            const parser = new SubStringParser(this, stringListeners);
+                            const parser = new SubStringParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case "]" : {
@@ -228,7 +237,7 @@ class SubArrayParser implements __PushPassAble, __Emissive {
 
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners);
+                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -299,7 +308,28 @@ class SubArrayParser implements __PushPassAble, __Emissive {
         this.stringListeners.forEach(listener => {
             if(listener.arrayDepth) {
                 listener.arrayDepth--;
-                if(listener.arrayDepth === 0 && listener.depth <= listener.path.length-1) {
+                if(listener.arrayDepth === 0 && listener.depth <= listener.path.length-1) { // the second condition shouldn't be possible but I'm not touching it
+                    listener.observer.complete();
+                }
+            } else {
+                // this shouldn't happen
+                throw new Error("array depth is 0 - did you close more brackets than you opened?");
+            }
+        });
+
+        // object listeners never emit. but if they did, this is what it would look like:
+        // // object listeners with path.length = 0 would emit arraySoFar
+        // this.objectListeners.forEach(listener => {
+        //     if(listener.path.length === 0) {
+        //         listener.observer.next(this.arraySoFar);
+        //     }
+        // });
+
+        // all listeners should be decremented
+        this.objectListeners.forEach(listener => {
+            if(listener.arrayDepth) {
+                listener.arrayDepth--;
+                if(listener.arrayDepth === 0) {
                     listener.observer.complete();
                 }
             } else {
@@ -315,7 +345,7 @@ class SubObjectParser implements __PushPassAble, __Emissive {
     private mode: MODE = START;
     private readonly objectSoFar: {[key: string]: any} = {};
     private currentKey = "";
-    private localStringListeners: StringListener[] = [];
+    private localObjectListeners: ObjectListener[];
 
     /** Transitions
      * START -> BEFORE_KEY // eg.: { followed by whitespace until key
@@ -339,8 +369,11 @@ class SubObjectParser implements __PushPassAble, __Emissive {
      *
      */
 
-    constructor(private parent: __PushPassAble, private stringListeners: StringListener[] = []) {
-
+    constructor(private parent: __PushPassAble, private stringListeners: StringListener[], private objectListeners: ObjectListener[]) {
+        // local object listeners are object listeners where path.length = 0
+        this.localObjectListeners = this.objectListeners.filter(listener => listener.path.length === 0);
+        // these should be filtered out from objectlisteners
+        this.objectListeners = this.objectListeners.filter(listener => listener.path.length > 0);
     }
 
     // receive a value from below
@@ -417,26 +450,33 @@ class SubObjectParser implements __PushPassAble, __Emissive {
                         || listener.path[listener.depth] === this.currentKey
                     );
                     stringListeners.forEach(listener => {listener.depth++;});
+                    // object listeners need to be exact, and then path trimmed
+                    const objectListeners = this.objectListeners.filter(listener =>
+                        listener.path[0] === this.currentKey
+                    ).map(listener => {
+                        return {path: listener.path.slice(1), observer: listener.observer, arrayDepth: listener.arrayDepth};
+                    });
 
                     switch(chunk[0]) {
                         case "{": {
                             this.mode = OBJECT;
-                            const parser = new SubObjectParser(this, stringListeners);
+                            const parser = new SubObjectParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case "[": {
                             this.mode = ARRAY;
-                            const parser = new SubArrayParser(this, stringListeners);
+                            const parser = new SubArrayParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case '"': {
                             this.mode = STRING;
-                            const parser = new SubStringParser(this, stringListeners);
+                            
+                            const parser = new SubStringParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners);
+                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -538,6 +578,17 @@ class SubObjectParser implements __PushPassAble, __Emissive {
         this.stringListeners.forEach(listener => {
             listener.depth--;
         });
+
+        // all local objectlisteners where path length = 0 should emit objectSoFar
+        this.localObjectListeners.forEach(listener => {
+            listener.observer.next(this.objectSoFar);
+        });
+        // and if there's no array in the parent path, they should close out
+        this.localObjectListeners.forEach(listener => {
+            if(!listener.arrayDepth) {
+                listener.observer.complete();
+            }
+        });
     }
 
 }
@@ -556,7 +607,7 @@ class SubNumberParser implements __PushPassAble {
      * NUMBER -> END // end must be whitespace or , or ] or }
      */
 
-    constructor(private parent: __PushPassAble, private stringListeners: StringListener[] = []) {
+    constructor(private parent: __PushPassAble, private stringListeners: StringListener[], private objectListeners: ObjectListener[]) {
         // make sure that all stringListeners are at max depth. warn those that aren't
         this.stringListeners.filter(listener => listener.depth < listener.path.length).forEach(listener => {
             warnOutOfScope("string listener at path " + listener.path.join(".") + " is out of scope");
@@ -646,6 +697,28 @@ class SubNumberParser implements __PushPassAble {
         this.stringListeners.forEach(listener => {
             listener.depth--;
         });
+
+
+        // objectlisteners, if their path length is 0, should emit the number (as a number type, as string otherwise)
+        this.objectListeners.forEach(listener => {
+            if(listener.path.length === 0) {
+                if(isNaN(+this.numberSoFar)) {
+                    listener.observer.next(this.numberSoFar);
+                } else {
+                    listener.observer.next(+this.numberSoFar);
+                }
+            }
+        });
+        // and if there's no array in the parent path, they should close out
+        this.objectListeners.forEach(listener => {
+            if(!listener.arrayDepth) {
+                listener.observer.complete();
+            }
+        });
+        // and if the path length is greater than 0, the out of scope warning should be emitted
+        this.objectListeners.filter(listener => listener.path.length > 0).forEach(listener => {
+            warnOutOfScope("object listener at path " + listener.path.join(".") + " is out of scope");
+        });
     }
 }
 
@@ -660,7 +733,7 @@ class SubStringParser implements __PushPassAble, __Emissive {
      * STRING -> END // end must be unescaped "
      */
 
-    constructor(private parent: __PushPassAble, private stringListeners: StringListener[] = []) {
+    constructor(private parent: __PushPassAble, private stringListeners: StringListener[], private objectListeners: ObjectListener[] = []) {
         // make sure that all stringListeners are at max depth. warn those that aren't
         this.stringListeners.filter(listener => listener.depth < listener.path.length).forEach(listener => {
             warnOutOfScope("string listener at path " + listener.path.join(".") + " is out of scope");
@@ -771,6 +844,20 @@ class SubStringParser implements __PushPassAble, __Emissive {
         // all listeners should be decremented
         this.stringListeners.forEach(listener => {
             listener.depth--;
+        });
+
+
+        // objectlisteners, if their path length is 0, should emit the string
+        this.objectListeners.forEach(listener => {
+            if(listener.path.length === 0) {
+                listener.observer.next(this.stringSoFar);
+            }
+        });
+        // and if there's no array in the parent path, they should close out
+        this.objectListeners.forEach(listener => {
+            if(!listener.arrayDepth) {
+                listener.observer.complete();
+            }
         });
     }
 

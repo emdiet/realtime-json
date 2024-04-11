@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const __1 = require("..");
 const test_1 = require("../test/test");
+const newlinespretty = true;
 // get the textarea with id textinput
 const textinput = document.getElementById("textinput");
 // get the button with id start
@@ -12,25 +13,6 @@ const reset = document.getElementById("btnReset");
 const cursor = document.getElementById("cursor");
 // get the span with id total
 const total = document.getElementById("total");
-// get inputs
-const input1 = document.getElementById("input1");
-const output1 = document.getElementById("output1");
-const status1 = document.getElementById("status1");
-const input2 = document.getElementById("input2");
-const output2 = document.getElementById("output2");
-const status2 = document.getElementById("status2");
-const input3 = document.getElementById("input3");
-const output3 = document.getElementById("output3");
-const status3 = document.getElementById("status3");
-const input4 = document.getElementById("input4");
-const output4 = document.getElementById("output4");
-const status4 = document.getElementById("status4");
-const input5 = document.getElementById("input5");
-const output5 = document.getElementById("output5");
-const status5 = document.getElementById("status5");
-const input6 = document.getElementById("input6");
-const output6 = document.getElementById("output6");
-const status6 = document.getElementById("status6");
 let cancelGenerator = () => { };
 start.onclick = () => {
     // cancel the previous generator
@@ -55,106 +37,84 @@ start.onclick = () => {
             console.log("done");
         }
     });
-    // input1
-    status1.textContent = "Waiting";
-    realtimeParser.observeStream(input1.value).subscribe({
-        next: (value) => {
-            output1.textContent += value;
-            status1.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output1.textContent = error.message;
-            status1.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status1.textContent = "Done";
+    // observers
+    // grab all divs with class "observer" and foreach...
+    document.querySelectorAll(".observer").forEach(div => {
+        // grab the input element inside the div
+        const input = div.querySelector("input.query");
+        // grab the output elements inside the div
+        const output_string = div.querySelector(".output .string");
+        const output_object = div.querySelector(".output .object");
+        // grab the status element inside the div
+        const status_string = div.querySelector(".status.string");
+        const status_object = div.querySelector(".status.object");
+        // grab the stingEnable and objectEnable checkbox values
+        const stringEnable = div.querySelector("input.stringEnable");
+        const objectEnable = div.querySelector("input.objectEnable");
+        // set the status to waiting
+        status_string.textContent = "Waiting";
+        status_object.textContent = "Waiting";
+        if (stringEnable === null || stringEnable === void 0 ? void 0 : stringEnable.checked) {
+            // observe the input as strings
+            let knowBackSlash = false;
+            realtimeParser.observeStream(input.value).subscribe({
+                next: (value) => {
+                    // make newlines prettier
+                    if (newlinespretty) {
+                        // if we have a backslash from previous value, add it to this value
+                        if (knowBackSlash) {
+                            value = "\\" + value;
+                            knowBackSlash = false;
+                        }
+                        // replace all \n with <br>
+                        value = value.replace(/\\n/g, "\n");
+                        // if last character is a backslash
+                        if (value[value.length - 1] === "\\") {
+                            knowBackSlash = true;
+                            value = value.slice(0, -1);
+                        }
+                        else {
+                            knowBackSlash = false;
+                        }
+                    }
+                    output_string.textContent += value;
+                    status_string.textContent = "Active";
+                },
+                error: (error) => {
+                    console.error(error);
+                    output_string.textContent = error.message;
+                    status_string.textContent = "Error";
+                },
+                complete: () => {
+                    // make newlines prettier
+                    if (newlinespretty) {
+                        // if we have a dangling backslash, add it
+                        if (knowBackSlash) {
+                            output_string.textContent += "\\";
+                        }
+                    }
+                    console.log("done");
+                    status_string.textContent = "Done";
+                }
+            });
         }
-    });
-    // input2
-    status2.textContent = "Waiting";
-    realtimeParser.observeStream(input2.value).subscribe({
-        next: (value) => {
-            output2.textContent += value;
-            status2.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output2.textContent = error.message;
-            status2.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status2.textContent = "Done";
-        }
-    });
-    // input3
-    status3.textContent = "Waiting";
-    realtimeParser.observeStream(input3.value).subscribe({
-        next: (value) => {
-            output3.textContent += value;
-            status3.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output3.textContent = error.message;
-            status3.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status3.textContent = "Done";
-        }
-    });
-    // input4
-    status4.textContent = "Waiting";
-    realtimeParser.observeStream(input4.value).subscribe({
-        next: (value) => {
-            output4.textContent += value;
-            status4.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output4.textContent = error.message;
-            status4.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status4.textContent = "Done";
-        }
-    });
-    // input5
-    status5.textContent = "Waiting";
-    realtimeParser.observeStream(input5.value).subscribe({
-        next: (value) => {
-            output5.textContent += value;
-            status5.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output5.textContent = error.message;
-            status5.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status5.textContent = "Done";
-        }
-    });
-    // input6
-    status6.textContent = "Waiting";
-    realtimeParser.observeStream(input6.value).subscribe({
-        next: (value) => {
-            output6.textContent += value;
-            status6.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output6.textContent = error.message;
-            status6.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status6.textContent = "Done";
+        if (objectEnable === null || objectEnable === void 0 ? void 0 : objectEnable.checked) {
+            // observe the input as objects
+            realtimeParser.observeObjects(input.value).subscribe({
+                next: (value) => {
+                    output_object.innerHTML += `<div class="obj">${JSON.stringify(value, null, 4)}</div>`;
+                    status_object.textContent = "Active";
+                },
+                error: (error) => {
+                    console.error(error);
+                    output_object.textContent = error.message;
+                    status_object.textContent = "Error";
+                },
+                complete: () => {
+                    console.log("done");
+                    status_object.textContent = "Done";
+                }
+            });
         }
     });
     const frame = () => {
@@ -171,8 +131,10 @@ reset.onclick = () => {
     cancelGenerator();
     cursor.innerText = "0";
     total.innerText = "0";
-    // find all divs class output and remove their textcontent
-    document.querySelectorAll(".output").forEach(div => div.textContent = "");
-    document.querySelectorAll(".status").forEach(span => span.textContent = "unk");
+    // clear all outputs
+    document.querySelectorAll(".output .status.string").forEach(div => div.textContent = "unk");
+    document.querySelectorAll(".output .status.object").forEach(div => div.textContent = "unk");
+    document.querySelectorAll(".output .string").forEach(div => div.textContent = "");
+    document.querySelectorAll(".output .object").forEach(div => div.textContent = "");
 };
 //# sourceMappingURL=demo.js.map

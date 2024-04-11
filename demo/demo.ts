@@ -1,6 +1,7 @@
 import { RealtimeJSONParser } from "..";
 import { generator } from "../test/test";
-import { Observable, Observer } from "../types/observable";
+
+const newlinespretty = true;
 
 // get the textarea with id textinput
 const textinput = document.getElementById("textinput") as HTMLTextAreaElement;
@@ -17,33 +18,8 @@ const cursor = document.getElementById("cursor");
 const total = document.getElementById("total");
 
 
-// get inputs
-const input1 = document.getElementById("input1") as HTMLInputElement;
-const output1 = document.getElementById("output1") as HTMLDivElement;
-const status1 = document.getElementById("status1") as HTMLSpanElement;
 
-const input2 = document.getElementById("input2") as HTMLInputElement;
-const output2 = document.getElementById("output2") as HTMLDivElement;
-const status2 = document.getElementById("status2") as HTMLSpanElement;
-
-const input3 = document.getElementById("input3") as HTMLInputElement;
-const output3 = document.getElementById("output3") as HTMLDivElement;
-const status3 = document.getElementById("status3") as HTMLSpanElement;
-
-const input4 = document.getElementById("input4") as HTMLInputElement;
-const output4 = document.getElementById("output4") as HTMLDivElement;
-const status4 = document.getElementById("status4") as HTMLSpanElement;
-
-const input5 = document.getElementById("input5") as HTMLInputElement;
-const output5 = document.getElementById("output5") as HTMLDivElement;
-const status5 = document.getElementById("status5") as HTMLSpanElement;
-
-const input6 = document.getElementById("input6") as HTMLInputElement;
-const output6 = document.getElementById("output6") as HTMLDivElement;
-const status6 = document.getElementById("status6") as HTMLSpanElement;
-
-
-let cancelGenerator = () => {};
+let cancelGenerator = () => { };
 start!.onclick = () => {
     // cancel the previous generator
     cancelGenerator();
@@ -57,13 +33,13 @@ start!.onclick = () => {
     // set total to input length
     total!.innerText = input.length.toString();
 
-    const {output, poke, isDone, _getProgress} = generator(input);
+    const { output, poke, isDone, _getProgress } = generator(input);
     const realtimeParser = new RealtimeJSONParser(output);
 
     output.subscribe({
         next: (value) => {
             // append the value to the div with id output
-            console.log("value", value);    
+            console.log("value", value);
         },
         error: (error) => {
             console.error(error);
@@ -73,129 +49,109 @@ start!.onclick = () => {
         }
     });
 
-    // input1
-    status1.textContent = "Waiting";
-    realtimeParser.observeStream(input1.value).subscribe({
-        next: (value) => {
-            output1.textContent += value;
-            status1.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output1.textContent = error.message;
-            status1.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status1.textContent = "Done";
+    // observers
+    // grab all divs with class "observer" and foreach...
+    document.querySelectorAll(".observer").forEach(div => {
+        // grab the input element inside the div
+        const input = div.querySelector("input.query") as HTMLInputElement;
+        // grab the output elements inside the div
+        const output_string = div.querySelector(".output .string") as HTMLDivElement;
+        const output_object = div.querySelector(".output .object") as HTMLDivElement;
+        // grab the status element inside the div
+        const status_string = div.querySelector(".status.string") as HTMLSpanElement;
+        const status_object = div.querySelector(".status.object") as HTMLSpanElement;
+
+        // grab the stingEnable and objectEnable checkbox values
+        const stringEnable = div.querySelector("input.stringEnable") as HTMLInputElement;
+        const objectEnable = div.querySelector("input.objectEnable") as HTMLInputElement;
+
+        // set the status to waiting
+        status_string.textContent = "Waiting";
+        status_object.textContent = "Waiting";
+
+        if (stringEnable?.checked) {
+            // observe the input as strings
+            let knowBackSlash = false;
+            realtimeParser.observeStream(input.value).subscribe({
+                next: (value) => {
+
+
+                    // make newlines prettier
+                    if (newlinespretty) {
+                        // if we have a backslash from previous value, add it to this value
+                        if (knowBackSlash) {
+                            value = "\\" + value;
+                            knowBackSlash = false;
+                        }
+                        // replace all \n with <br>
+                        value = value.replace(/\\n/g, "\n");
+                        // if last character is a backslash
+                        if (value[value.length - 1] === "\\") {
+                            knowBackSlash = true;
+                            value = value.slice(0, -1);
+                        } else {
+                            knowBackSlash = false;
+                        }
+                    }
+
+
+                    output_string.textContent += value;
+                    status_string.textContent = "Active";
+
+                },
+                error: (error) => {
+                    console.error(error);
+                    output_string.textContent = error.message;
+                    status_string.textContent = "Error";
+                },
+                complete: () => {
+                    // make newlines prettier
+                    if (newlinespretty) {
+                        // if we have a dangling backslash, add it
+                        if (knowBackSlash) {
+                            output_string.textContent += "\\";
+                        }
+                    }
+
+                    console.log("done");
+                    status_string.textContent = "Done";
+                }
+            });
+        }
+
+        if (objectEnable?.checked) {
+            // observe the input as objects
+            realtimeParser.observeObjects(input.value).subscribe({
+                next: (value) => {
+                    output_object.innerHTML += `<div class="obj">${JSON.stringify(value, null, 4)}</div>`;
+                    status_object.textContent = "Active";
+                },
+                error: (error) => {
+                    console.error(error);
+                    output_object.textContent = error.message;
+                    status_object.textContent = "Error";
+                },
+                complete: () => {
+                    console.log("done");
+                    status_object.textContent = "Done";
+                }
+            });
         }
     });
-
-    // input2
-    status2.textContent = "Waiting";
-    realtimeParser.observeStream(input2.value).subscribe({
-        next: (value) => {
-            output2.textContent += value;
-            status2.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output2.textContent = error.message;
-            status2.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status2.textContent = "Done";
-        }
-    });
-
-    // input3
-    status3.textContent = "Waiting";
-    realtimeParser.observeStream(input3.value).subscribe({
-        next: (value) => {
-            output3.textContent += value;
-            status3.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output3.textContent = error.message;
-            status3.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status3.textContent = "Done";
-        }
-    });
-
-    // input4
-    status4.textContent = "Waiting";
-    realtimeParser.observeStream(input4.value).subscribe({
-        next: (value) => {
-            output4.textContent += value;
-            status4.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output4.textContent = error.message;
-            status4.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status4.textContent = "Done";
-        }
-    });
-
-    // input5
-    status5.textContent = "Waiting";
-    realtimeParser.observeStream(input5.value).subscribe({
-        next: (value) => {
-            output5.textContent += value;
-            status5.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output5.textContent = error.message;
-            status5.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status5.textContent = "Done";
-        }
-    });
-
-    // input6
-    status6.textContent = "Waiting";
-    realtimeParser.observeStream(input6.value).subscribe({
-        next: (value) => {
-            output6.textContent += value;
-            status6.textContent = "Active";
-        },
-        error: (error) => {
-            console.error(error);
-            output6.textContent = error.message;
-            status6.textContent = "Error";
-        },
-        complete: () => {
-            console.log("done");
-            status6.textContent = "Done";
-        }
-    });
-    
-
 
 
     const frame = () => {
-        if(isDone() || canceled) return;
+        if (isDone() || canceled) return;
 
         poke();
 
         // set cursor to _getProgress
         cursor!.innerText = _getProgress().toString();
 
-        requestAnimationFrame(frame);    
+        requestAnimationFrame(frame);
     }
     frame();
-    
+
 }
 
 reset!.onclick = () => {
@@ -203,9 +159,12 @@ reset!.onclick = () => {
     cursor!.innerText = "0";
     total!.innerText = "0";
 
-    // find all divs class output and remove their textcontent
-    document.querySelectorAll(".output").forEach(div => div.textContent = "");
-    document.querySelectorAll(".status").forEach(span => span.textContent = "unk");
+    // clear all outputs
+    document.querySelectorAll(".output .status.string").forEach(div => div.textContent = "unk");
+    document.querySelectorAll(".output .status.object").forEach(div => div.textContent = "unk");
+    document.querySelectorAll(".output .string").forEach(div => div.textContent = "");
+    document.querySelectorAll(".output .object").forEach(div => div.textContent = "");
+
 }
 
 

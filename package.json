@@ -23,5 +23,12 @@
   "bugs": {
     "url": "https://github.com/emdiet/realtime-json/issues"
   },
-  "homepage": "https://github.com/emdiet/realtime-json#readme"
+  "homepage": "https://github.com/emdiet/realtime-json#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.4",
+    "jest": "^29.6.4",
+    "nock": "^13.3.3",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.4.5"
+  }
 }

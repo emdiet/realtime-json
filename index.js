@@ -24,6 +24,7 @@ class RealtimeJSONParser {
     constructor(input) {
         this.__activeSubParser = this;
         this.closed = false;
+        this.rootMode = START;
         this.stringListeners = [];
         this.objectListeners = [];
         input.subscribe({
@@ -59,19 +60,19 @@ class RealtimeJSONParser {
         // expect chunk[0] to be "{" or "["
         switch (chunk[0]) {
             case "{": {
-                const parser = new SubObjectParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubObjectParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             case "[": {
-                const parser = new SubArrayParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubArrayParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             case '"': {
-                const parser = new SubStringParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubStringParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
             default: {
-                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners);
+                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
         }
@@ -81,6 +82,9 @@ class RealtimeJSONParser {
     __pass(chunk, result) {
         this.__emitDelta(result);
         this.__close();
+        // close all listeners that aren't closed yet
+        this.stringListeners.forEach(listener => { listener.observer.complete(); });
+        this.objectListeners.forEach(listener => { listener.observer.complete(); });
         return this;
     }
     __emitDelta(delta) {
@@ -101,13 +105,13 @@ class RealtimeJSONParser {
     observeStream(query) {
         const path = this.__toQueryPath(query);
         const subject = new Subject();
-        this.stringListeners.push({ path: path, depth: 0, observer: subject });
+        this.stringListeners.push({ path: path, depth: 0, arrayDepth: 0, observer: subject });
         return subject;
     }
     observeObjects(query) {
         const path = this.__toQueryPath(query);
         const subject = new Subject();
-        this.objectListeners.push({ path: path, depth: 0, observer: subject });
+        this.objectListeners.push({ path: path, arrayDepth: 0, observer: subject });
         return subject;
     }
     __toQueryPath(query) {
@@ -139,13 +143,16 @@ class SubArrayParser {
     * BEGINVALUE -> NUMBER // 1
     *
     */
-    constructor(parent, stringListeners = []) {
+    constructor(parent, stringListeners, objectListeners) {
         this.parent = parent;
         this.stringListeners = stringListeners;
+        this.objectListeners = objectListeners;
         this.mode = START;
         this.arraySoFar = [];
         // because we're in an array, trade listener depth for array depth
-        stringListeners.forEach(listener => { listener.depth--; listener.arrayDepth = listener.arrayDepth ? listener.arrayDepth + 1 : 1; });
+        stringListeners.forEach(listener => { listener.arrayDepth++; listener.depth--; });
+        // objectListeners have no depth
+        objectListeners.forEach(listener => { listener.arrayDepth++; });
     }
     // receive a value from below
     __push(chunk) {
@@ -179,21 +186,22 @@ class SubArrayParser {
                         // determine listeners
                         const stringListeners = this.stringListeners;
                         stringListeners.forEach(listener => { listener.depth++; });
+                        const objectListeners = this.objectListeners;
                         // expect { or [ or " or number
                         switch (chunk[0]) {
                             case "{": {
                                 this.mode = OBJECT;
-                                const parser = new SubObjectParser(this, stringListeners);
+                                const parser = new SubObjectParser(this, stringListeners, objectListeners);
                                 return parser.__push(chunk);
                             }
                             case "[": {
                                 this.mode = ARRAY;
-                                const parser = new SubArrayParser(this, stringListeners);
+                                const parser = new SubArrayParser(this, stringListeners, objectListeners);
                                 return parser.__push(chunk);
                             }
                             case '"': {
                                 this.mode = STRING;
-                                const parser = new SubStringParser(this, stringListeners);
+                                const parser = new SubStringParser(this, stringListeners, objectListeners);
                                 return parser.__push(chunk);
                             }
                             case "]": {
@@ -209,7 +217,7 @@ class SubArrayParser {
                             }
                             default: {
                                 this.mode = NUMBER;
-                                const parser = new SubNumberParser(this, stringListeners);
+                                const parser = new SubNumberParser(this, stringListeners, objectListeners);
                                 return parser.__push(chunk);
                             }
                         }
@@ -275,7 +283,27 @@ class SubArrayParser {
         this.stringListeners.forEach(listener => {
             if (listener.arrayDepth) {
                 listener.arrayDepth--;
-                if (listener.arrayDepth === 0 && listener.depth <= listener.path.length - 1) {
+                if (listener.arrayDepth === 0 && listener.depth <= listener.path.length - 1) { // the second condition shouldn't be possible but I'm not touching it
+                    listener.observer.complete();
+                }
+            }
+            else {
+                // this shouldn't happen
+                throw new Error("array depth is 0 - did you close more brackets than you opened?");
+            }
+        });
+        // object listeners never emit. but if they did, this is what it would look like:
+        // // object listeners with path.length = 0 would emit arraySoFar
+        // this.objectListeners.forEach(listener => {
+        //     if(listener.path.length === 0) {
+        //         listener.observer.next(this.arraySoFar);
+        //     }
+        // });
+        // all listeners should be decremented
+        this.objectListeners.forEach(listener => {
+            if (listener.arrayDepth) {
+                listener.arrayDepth--;
+                if (listener.arrayDepth === 0) {
                     listener.observer.complete();
                 }
             }
@@ -308,13 +336,17 @@ class SubObjectParser {
      * BEFORE_KEY -> END // }
      *
      */
-    constructor(parent, stringListeners = []) {
+    constructor(parent, stringListeners, objectListeners) {
         this.parent = parent;
         this.stringListeners = stringListeners;
+        this.objectListeners = objectListeners;
         this.mode = START;
         this.objectSoFar = {};
         this.currentKey = "";
-        this.localStringListeners = [];
+        // local object listeners are object listeners where path.length = 0
+        this.localObjectListeners = this.objectListeners.filter(listener => listener.path.length === 0);
+        // these should be filtered out from objectlisteners
+        this.objectListeners = this.objectListeners.filter(listener => listener.path.length > 0);
     }
     // receive a value from below
     __push(chunk) {
@@ -380,25 +412,29 @@ class SubObjectParser {
                     const stringListeners = this.stringListeners.filter(listener => listener.depth >= listener.path.length
                         || listener.path[listener.depth] === this.currentKey);
                     stringListeners.forEach(listener => { listener.depth++; });
+                    // object listeners need to be exact, and then path trimmed
+                    const objectListeners = this.objectListeners.filter(listener => listener.path[0] === this.currentKey).map(listener => {
+                        return { path: listener.path.slice(1), observer: listener.observer, arrayDepth: listener.arrayDepth };
+                    });
                     switch (chunk[0]) {
                         case "{": {
                             this.mode = OBJECT;
-                            const parser = new SubObjectParser(this, stringListeners);
+                            const parser = new SubObjectParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case "[": {
                             this.mode = ARRAY;
-                            const parser = new SubArrayParser(this, stringListeners);
+                            const parser = new SubArrayParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         case '"': {
                             this.mode = STRING;
-                            const parser = new SubStringParser(this, stringListeners);
+                            const parser = new SubStringParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners);
+                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -491,6 +527,16 @@ class SubObjectParser {
         this.stringListeners.forEach(listener => {
             listener.depth--;
         });
+        // all local objectlisteners where path length = 0 should emit objectSoFar
+        this.localObjectListeners.forEach(listener => {
+            listener.observer.next(this.objectSoFar);
+        });
+        // and if there's no array in the parent path, they should close out
+        this.localObjectListeners.forEach(listener => {
+            if (!listener.arrayDepth) {
+                listener.observer.complete();
+            }
+        });
     }
 }
 class SubNumberParser {
@@ -501,9 +547,10 @@ class SubNumberParser {
      * NUMBER -> NUMBER // keep appending to the number
      * NUMBER -> END // end must be whitespace or , or ] or }
      */
-    constructor(parent, stringListeners = []) {
+    constructor(parent, stringListeners, objectListeners) {
         this.parent = parent;
         this.stringListeners = stringListeners;
+        this.objectListeners = objectListeners;
         this.numberSoFar = "";
         this.mode = START;
         this.numberMatch = /^[-+.eE0-9]+/;
@@ -588,6 +635,27 @@ class SubNumberParser {
         this.stringListeners.forEach(listener => {
             listener.depth--;
         });
+        // objectlisteners, if their path length is 0, should emit the number (as a number type, as string otherwise)
+        this.objectListeners.forEach(listener => {
+            if (listener.path.length === 0) {
+                if (isNaN(+this.numberSoFar)) {
+                    listener.observer.next(this.numberSoFar);
+                }
+                else {
+                    listener.observer.next(+this.numberSoFar);
+                }
+            }
+        });
+        // and if there's no array in the parent path, they should close out
+        this.objectListeners.forEach(listener => {
+            if (!listener.arrayDepth) {
+                listener.observer.complete();
+            }
+        });
+        // and if the path length is greater than 0, the out of scope warning should be emitted
+        this.objectListeners.filter(listener => listener.path.length > 0).forEach(listener => {
+            warnOutOfScope("object listener at path " + listener.path.join(".") + " is out of scope");
+        });
     }
 }
 class SubStringParser {
@@ -596,9 +664,10 @@ class SubStringParser {
      * STRING -> STRING // keep appending to the string, allow anything other than \".
      * STRING -> END // end must be unescaped "
      */
-    constructor(parent, stringListeners = []) {
+    constructor(parent, stringListeners, objectListeners = []) {
         this.parent = parent;
         this.stringListeners = stringListeners;
+        this.objectListeners = objectListeners;
         this.stringSoFar = "";
         this.mode = START;
         this.escapecounter = 0;
@@ -701,6 +770,18 @@ class SubStringParser {
         // all listeners should be decremented
         this.stringListeners.forEach(listener => {
             listener.depth--;
+        });
+        // objectlisteners, if their path length is 0, should emit the string
+        this.objectListeners.forEach(listener => {
+            if (listener.path.length === 0) {
+                listener.observer.next(this.stringSoFar);
+            }
+        });
+        // and if there's no array in the parent path, they should close out
+        this.objectListeners.forEach(listener => {
+            if (!listener.arrayDepth) {
+                listener.observer.complete();
+            }
         });
     }
 }

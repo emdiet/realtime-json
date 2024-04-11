@@ -1,3 +1,20 @@
+<style>
+    .obj{
+        color: #00f;
+        border: #00f 1px solid;
+        margin-right: 2px;
+        background-color: aqua;
+        display: inline-block;
+    }
+    .object{
+        /* monospace and white-space: pre-wrap; */
+        white-space: pre-wrap;
+        font-family: monospace;
+    }
+    .string{
+        white-space: pre-wrap;
+    }
+</style>
 <div>
     <textarea id="textinput">
 {
@@ -24,19 +41,51 @@
         <button id="btnReset">reset</button>
         <span>cursor:</span><span id="cursor">0</span><span>/</span><span class="status" id="total">0</span>
     </div>
-    <input type="text" id="input1" value="name"/><span>status:</span><span class="status" id="status1">unk</span>
-    <div class="output" id="output1"></div>
-    <input type="text" id="input2" value="location.city"/><span>status:</span><span class="status" id="status2">unk</span>
-    <div class="output" id="output2"></div>
-    <input type="text" id="input3" value="children"/><span>status:</span><span class="status" id="status3">unk</span>
-    <div class="output" id="output3"></div>
-    <input type="text" id="input4" value="children.name"/><span>status:</span><span class="status" id="status4">unk</span>
-    <div class="output" id="output4"></div>
-    <input type="text" id="input5" value="location"/><span>status:</span><span class="status" id="status5">unk</span>
-    <div class="output" id="output5"></div>
-    <input type="text" id="input6" value=""/><span>status:</span><span class="status" id="status6">unk</span>
-    <div class="output" id="output6"></div>
+    <div class="observer">
+        <input type="text" class="query" value="name"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value="location.city"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value="children"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value="children.name"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value="location"/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+    <div class="observer">
+        <input type="text" class="query" value=""/><input type="checkbox" class="stringEnable" checked/><span>stringEnable</span><input type="checkbox" class="objectEnable" checked/><span>objectEnable</span><span> | string status:</span><span class="status string">unk</span><span> | obj status:</span><span class="status object">unk</span>
+        <div class="output">
+            <div class="string"></div>
+            <div class="object"></div>
+        </div>
+    </div>
+
 </div>
+
 <script>var exports = {};</script>
 <script>var require = () => exports;</script>
 <script src="../index.js"></script>

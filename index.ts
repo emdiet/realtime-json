@@ -6,6 +6,8 @@ const trailingCommasAllowed = true;
 const objectCommaSeparatorRequired = false;
 const outOfScopeWarnings = true;
 
+const ignoreWhiteSpacesAndApostrophes = true; // for gpt-4-turbo hallucinations
+
 type MODE = Symbol
 // modes
 const START: MODE = Symbol("START"); // [ or { or " or number
@@ -33,7 +35,10 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
     private closed = false;
     private rootMode: MODE = START;
 
-    constructor(input : Observable<string>) {
+    constructor(private input?: Observable<string>) {
+        if(!input) {
+            return;
+        }
         input.subscribe({
             next: (value) => {
                 if(value === "") return;
@@ -50,12 +55,33 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
                 }
             },
             error: (error) => {
-                console.error(error);
+                this.stringListeners.forEach(listener => {
+                    listener.observer.error(error);
+                });
+                this.objectListeners.forEach(listener => {
+                    listener.observer.error(error);
+                });
             },
             complete: () => {
-                console.log("done");
+                this.stringListeners.forEach(listener => {
+                    listener.observer.complete();
+                });
+                this.objectListeners.forEach(listener => {
+                    listener.observer.complete();
+                });
             }
         });
+    }
+
+    public next(value: string){
+        if(this.input) {
+            throw new Error("input already provided: use input stream instead");
+        }
+        if(this.closed) {
+            throw new Error("unexpected character(s) after closing");
+        }
+        if(value === "") return;
+        this.__activeSubParser = this.__activeSubParser.__push(value);
     }
 
     // receive a value from below
@@ -77,6 +103,22 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
             case '"': {
                 const parser = new SubStringParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
+            }
+            case " ":
+            case "\t":
+            case "\n":
+            case "\r":
+            case "`":{
+                if(ignoreWhiteSpacesAndApostrophes) {
+                    // trim all instances of these characters from the front
+                    const trimmed = chunk.replace(/^[\s\t\n\r`]+/, "");
+                    // if empty, return this
+                    if(!trimmed) return this;
+                    // otherwise, continue with trimmed
+                    return this.__push(trimmed);
+                } else {
+                    throw new Error("unexpected whitespace");
+                }
             }
             default: {
                 const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
@@ -882,7 +924,7 @@ function trimStart(chunk: string): string {
     
 
 
-class Subject<T> implements Observable<T> {
+export class Subject<T> implements Observable<T> {
     private observers: Observer<T>[] = [];
     private _closed = false;
 

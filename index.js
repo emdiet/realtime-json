@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RealtimeJSONParser = void 0;
+exports.Subject = exports.RealtimeJSONParser = void 0;
 const trailingCommasAllowed = true;
 const objectCommaSeparatorRequired = false;
 const outOfScopeWarnings = true;
+const ignoreWhiteSpacesAndApostrophes = true; // for gpt-4-turbo hallucinations
 // modes
 const START = Symbol("START"); // [ or { or " or number
 const BEFORE_KEY = Symbol("BEFORE_KEY"); // white space before key
@@ -22,11 +23,15 @@ const AFTER_VALUE = Symbol("AFTER_VALUE"); // white space until , or ] or }
 const END = Symbol("END");
 class RealtimeJSONParser {
     constructor(input) {
+        this.input = input;
         this.__activeSubParser = this;
         this.closed = false;
         this.rootMode = START;
         this.stringListeners = [];
         this.objectListeners = [];
+        if (!input) {
+            return;
+        }
         input.subscribe({
             next: (value) => {
                 if (value === "")
@@ -45,12 +50,33 @@ class RealtimeJSONParser {
                 }
             },
             error: (error) => {
-                console.error(error);
+                this.stringListeners.forEach(listener => {
+                    listener.observer.error(error);
+                });
+                this.objectListeners.forEach(listener => {
+                    listener.observer.error(error);
+                });
             },
             complete: () => {
-                console.log("done");
+                this.stringListeners.forEach(listener => {
+                    listener.observer.complete();
+                });
+                this.objectListeners.forEach(listener => {
+                    listener.observer.complete();
+                });
             }
         });
+    }
+    next(value) {
+        if (this.input) {
+            throw new Error("input already provided: use input stream instead");
+        }
+        if (this.closed) {
+            throw new Error("unexpected character(s) after closing");
+        }
+        if (value === "")
+            return;
+        this.__activeSubParser = this.__activeSubParser.__push(value);
     }
     // receive a value from below
     __push(chunk) {
@@ -70,6 +96,24 @@ class RealtimeJSONParser {
             case '"': {
                 const parser = new SubStringParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
+            }
+            case " ":
+            case "\t":
+            case "\n":
+            case "\r":
+            case "`": {
+                if (ignoreWhiteSpacesAndApostrophes) {
+                    // trim all instances of these characters from the front
+                    const trimmed = chunk.replace(/^[\s\t\n\r`]+/, "");
+                    // if empty, return this
+                    if (!trimmed)
+                        return this;
+                    // otherwise, continue with trimmed
+                    return this.__push(trimmed);
+                }
+                else {
+                    throw new Error("unexpected whitespace");
+                }
             }
             default: {
                 const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
@@ -826,6 +870,7 @@ class Subject {
         this.observers.forEach(observer => observer.complete());
     }
 }
+exports.Subject = Subject;
 function warnOutOfScope(message) {
     if (outOfScopeWarnings) {
         console.warn(message);

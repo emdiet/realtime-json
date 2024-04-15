@@ -134,7 +134,7 @@ export class RealtimeJSONParser implements __PushPassAble, __Emissive {
                 }
             }
             default: {
-                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
+                const parser = new SubNumberOrBoolParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
         }
@@ -292,7 +292,7 @@ class SubArrayParser implements __PushPassAble, __Emissive {
 
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
+                            const parser = new SubNumberOrBoolParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -461,7 +461,7 @@ class SubObjectParser implements __PushPassAble, __Emissive {
                         if(chunk[0] === "}"){
                             this.mode = END;
                             this.__close();
-                            return this.parent.__pass(chunk, this.objectSoFar);
+                            return this.parent.__pass(chunk.slice(1), this.objectSoFar);
                         }
 
                         throw new Error("unexpected character");
@@ -531,7 +531,7 @@ class SubObjectParser implements __PushPassAble, __Emissive {
                         }
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
+                            const parser = new SubNumberOrBoolParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -648,10 +648,10 @@ class SubObjectParser implements __PushPassAble, __Emissive {
 
 }
 
-class SubNumberParser implements __PushPassAble {
+class SubNumberOrBoolParser implements __PushPassAble {
     private numberSoFar = "";
     private mode: MODE = START;
-    private readonly numberMatch = /^[-+.eE0-9]+/;
+    private readonly numberMatch = /^[-+.eE0-9TtrueFfalse]+/;
 
     // this is a permissive number parser.
     // a number can contain +, -, ., e, E, 0-9 in any order. we don't check for validity of the number.
@@ -678,7 +678,7 @@ class SubNumberParser implements __PushPassAble {
                     // make sure it starts with a number
                     const chunkMatch = chunk.match(this.numberMatch);
                     if(!chunkMatch) {
-                        throw new Error("unexpected character, expected number (0-9, +, -, ., e, E)");
+                        throw new Error("unexpected character, expected number or bool ([-+.eE0-9TtrueFfalse])");
                     }
                     this.mode = NUMBER;
                     this.numberSoFar = chunkMatch[0];

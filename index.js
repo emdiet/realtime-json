@@ -116,7 +116,7 @@ class RealtimeJSONParser {
                 }
             }
             default: {
-                const parser = new SubNumberParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
+                const parser = new SubNumberOrBoolParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
             }
         }
@@ -261,7 +261,7 @@ class SubArrayParser {
                             }
                             default: {
                                 this.mode = NUMBER;
-                                const parser = new SubNumberParser(this, stringListeners, objectListeners);
+                                const parser = new SubNumberOrBoolParser(this, stringListeners, objectListeners);
                                 return parser.__push(chunk);
                             }
                         }
@@ -420,7 +420,7 @@ class SubObjectParser {
                         if (chunk[0] === "}") {
                             this.mode = END;
                             this.__close();
-                            return this.parent.__pass(chunk, this.objectSoFar);
+                            return this.parent.__pass(chunk.slice(1), this.objectSoFar);
                         }
                         throw new Error("unexpected character");
                     }
@@ -478,7 +478,7 @@ class SubObjectParser {
                         }
                         default: {
                             this.mode = NUMBER;
-                            const parser = new SubNumberParser(this, stringListeners, objectListeners);
+                            const parser = new SubNumberOrBoolParser(this, stringListeners, objectListeners);
                             return parser.__push(chunk);
                         }
                     }
@@ -583,7 +583,7 @@ class SubObjectParser {
         });
     }
 }
-class SubNumberParser {
+class SubNumberOrBoolParser {
     // this is a permissive number parser.
     // a number can contain +, -, ., e, E, 0-9 in any order. we don't check for validity of the number.
     /** Transitions
@@ -597,7 +597,7 @@ class SubNumberParser {
         this.objectListeners = objectListeners;
         this.numberSoFar = "";
         this.mode = START;
-        this.numberMatch = /^[-+.eE0-9]+/;
+        this.numberMatch = /^[-+.eE0-9TtrueFfalse]+/;
         // make sure that all stringListeners are at max depth. warn those that aren't
         this.stringListeners.filter(listener => listener.depth < listener.path.length).forEach(listener => {
             warnOutOfScope("string listener at path " + listener.path.join(".") + " is out of scope");
@@ -612,7 +612,7 @@ class SubNumberParser {
                     // make sure it starts with a number
                     const chunkMatch = chunk.match(this.numberMatch);
                     if (!chunkMatch) {
-                        throw new Error("unexpected character, expected number (0-9, +, -, ., e, E)");
+                        throw new Error("unexpected character, expected number or bool ([-+.eE0-9TtrueFfalse])");
                     }
                     this.mode = NUMBER;
                     this.numberSoFar = chunkMatch[0];

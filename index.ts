@@ -1,6 +1,6 @@
 export type Observable<T> = {
     subscribe: (observer: Observer<T>) => Subscription;
-    closed: boolean;
+    closed?: boolean;
 };
 
 export type Observer<T> = {

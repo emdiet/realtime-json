@@ -101,20 +101,29 @@ class RealtimeJSONParser {
             case "\t":
             case "\n":
             case "\r":
-            case "`": {
-                if (ignoreWhiteSpacesAndApostrophes) {
-                    // trim all instances of these characters from the front
-                    const trimmed = chunk.replace(/^[\s\t\n\r`]+/, "");
-                    // if empty, return this
-                    if (!trimmed)
-                        return this;
-                    // otherwise, continue with trimmed
-                    return this.__push(trimmed);
+            case "`":
+            case "J":
+            case "j":
+            case "S":
+            case "s":
+            case "O":
+            case "o":
+            case "N":
+            case "n":
+                {
+                    if (ignoreWhiteSpacesAndApostrophes) {
+                        // trim all instances of these characters from the front
+                        const trimmed = chunk.replace(/^[\s\t\n\r`JSONjson]+/, "");
+                        // if empty, return this
+                        if (!trimmed)
+                            return this;
+                        // otherwise, continue with trimmed
+                        return this.__push(trimmed);
+                    }
+                    else {
+                        throw new Error("unexpected whitespace");
+                    }
                 }
-                else {
-                    throw new Error("unexpected whitespace");
-                }
-            }
             default: {
                 const parser = new SubNumberOrBoolParser(this.__activeSubParser, this.stringListeners, this.objectListeners);
                 return parser.__push(chunk);
